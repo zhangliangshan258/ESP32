@@ -1,0 +1,14 @@
+{
+    "idf.currentSetup": "C:\\esp\\v6.1\\esp-idf",
+    "idf.port": "COM8",
+    "idf.flashType": "UART",
+    "idf.adapterTargetName": "esp32s3",
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "C_Cpp.default.cStandard": "c17",
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.intelliSenseMode": "gcc-x64",
+    "C_Cpp.intelliSenseEngine": "default",
+    "files.associations": {
+        "*.h": "c"
+    }
+}

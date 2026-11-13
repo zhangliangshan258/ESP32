@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14101F">
+<title>屏幕内容设置 · ESP32-S3 仪表盘</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%23D0BCFF'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23141118'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#14101F;
+    --surface:#241C33;
+    --surface-high:#322547;
+    --surface-higher:#3D2E55;
+    --on-surface:#F3EDFF;
+    --on-surface-var:#CBC2E0;
+    --outline:#8E86A8;
+    --primary:#C9A6FF;
+    --on-primary:#1E1233;
+    --secondary:#A9C4FF;
+    --tertiary:#FFAECE;
+    --danger:#FFB4AB;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(120% 80% at 100% 0%, rgba(201,166,255,.10), transparent 60%),
+      radial-gradient(90% 60% at 0% 100%, rgba(255,174,206,.08), transparent 60%),
+      var(--bg);
+    color:var(--on-surface);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    padding:22px 16px 40px;
+    display:flex;
+    justify-content:center;
+  }
+  .wrap{width:100%;max-width:520px}
+
+  header{margin-bottom:18px}
+  .title-row{display:flex;align-items:center;gap:12px}
+  .logo-dot{
+    width:44px;height:44px;border-radius:14px;flex:none;
+    background:linear-gradient(140deg,#D0BCFF,#FFAECE);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 18px rgba(201,166,255,.25);
+  }
+  .logo-dot::after{content:"";width:16px;height:16px;border-radius:50%;background:#14101F}
+  h1{font-size:20px;font-weight:600;margin:0;letter-spacing:.3px}
+  .sub{margin:2px 0 0;font-size:12.5px;color:var(--on-surface-var)}
+  .status{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .pill{
+    font-size:12.5px;color:var(--on-surface-var);
+    background:var(--surface);border-radius:999px;padding:5px 12px;
+    border:1px solid rgba(142,134,168,.18);
+  }
+
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:12px;
+    border:1px solid rgba(142,134,168,.10);
+    box-shadow:0 8px 24px rgba(0,0,0,.22);
+    animation:rise .35s ease both;
+  }
+  .card:nth-of-type(2){animation-delay:.04s}
+  .card:nth-of-type(3){animation-delay:.08s}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .card-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .card-head h2{font-size:15px;font-weight:600;margin:0;color:var(--on-surface)}
+  .hint{font-size:12px;color:var(--outline);line-height:1.45}
+
+  /* ---- 设备 1:1 预览 ---- */
+  .device{
+    display:flex;align-items:center;gap:18px;
+    background:var(--surface);border-radius:var(--radius);
+    padding:6px 12px;height:120px;overflow:hidden;
+    border:1px solid rgba(142,134,168,.14);
+  }
+  .avatar{
+    width:108px;height:108px;flex:none;border-radius:24px;overflow:hidden;
+    background:var(--surface-high);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .avatar canvas{width:108px;height:108px;display:block;image-rendering:auto}
+  .brand-col{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+  .cap{font-size:11px;letter-spacing:1.2px;color:var(--on-surface-var)}
+  .clock{font-size:24px;font-weight:500;color:var(--on-surface);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+  .chip{
+    height:26px;line-height:26px;padding:0 10px;border-radius:13px;
+    background:var(--surface-high);color:var(--on-surface-var);font-size:12px;white-space:nowrap;
+    max-width:150px;overflow:hidden;text-overflow:ellipsis;
+  }
+  .motto{
+    margin-left:auto;align-self:flex-end;
+    color:var(--tertiary);font-size:20px;line-height:1.25;text-align:right;
+    max-width:56%;word-break:break-all;
+  }
+
+  /* ---- 上传区 ---- */
+  .upload{
+    border:1.5px dashed rgba(142,134,168,.45);
+    border-radius:14px;
+    padding:22px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s,background .2s,transform .2s;
+    background:rgba(50,37,71,.35);
+  }
+  .upload:hover{border-color:var(--primary);background:rgba(201,166,255,.07)}
+  .upload.drag{border-color:var(--primary);background:rgba(201,166,255,.14);transform:scale(.995)}
+  .upload-text{font-size:14px;color:var(--on-surface)}
+  .upload-sub{font-size:12px;color:var(--outline);margin-top:6px}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+
+  /* ---- 表单 ---- */
+  .field{display:flex;gap:10px}
+  .field.two input{flex:1;min-width:0}
+  .btns{display:flex;gap:8px;flex:none}
+  input[type=text]{
+    flex:1;min-width:0;height:48px;border-radius:12px;
+    background:var(--surface-high);
+    border:1px solid rgba(142,134,168,.22);
+    color:var(--on-surface);
+    font-size:16px;padding:0 14px;outline:none;
+    transition:border-color .2s,box-shadow .2s;
+  }
+  input[type=text]::placeholder{color:var(--outline)}
+  input[type=text]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(201,166,255,.16)}
+
+  .btn{
+    height:48px;padding:0 18px;border-radius:12px;border:none;
+    font-size:15px;font-weight:500;cursor:pointer;
+    transition:filter .2s,background .2s,opacity .2s,transform .1s;
+    font-family:inherit;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.primary{background:var(--primary);color:var(--on-primary);flex:none}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.small{height:38px;font-size:14px;padding:0 14px}
+  .btn.text{
+    background:transparent;color:var(--secondary);height:38px;padding:0 12px;font-size:13.5px;
+    border:1px solid rgba(169,196,255,.28);border-radius:10px;
+  }
+  .btn.text:hover{background:rgba(169,196,255,.10)}
+  .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+  .field-actions{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap}
+
+  .foot{
+    text-align:center;font-size:12px;color:var(--outline);
+    margin-top:18px;line-height:1.6;
+  }
+  .foot code{color:var(--on-surface-var);background:var(--surface);padding:2px 6px;border-radius:6px}
+
+  /* ---- Toast ---- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);
+    max-width:calc(100vw - 40px);
+    background:var(--surface-higher);color:var(--on-surface);
+    padding:12px 18px;border-radius:14px;font-size:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    border:1px solid rgba(142,134,168,.25);
+    opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;
+    z-index:50;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast.ok{border-color:rgba(201,166,255,.55)}
+  .toast.error{border-color:rgba(255,180,171,.55);color:#FFDAD6}
+
+  .spin{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid rgba(30,18,51,.35);border-top-color:var(--on-primary);
+    display:inline-block;margin-right:8px;vertical-align:-2px;
+    animation:rot .7s linear infinite;
+  }
+  @keyframes rot{to{transform:rotate(360deg)}}
+  body.busy .upload{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title-row">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>屏幕内容设置</h1>
+        <p class="sub">ESP32-S3 · CO5300 AMOLED 仪表盘</p>
+      </div>
+    </div>
+    <div class="status">
+      <span class="pill" id="pillSsid">读取设备状态…</span>
+      <span class="pill" id="pillHost">—</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>实时预览</h2>
+      <span class="hint">与屏幕同比例</span>
+    </div>
+    <div class="device">
+      <div class="avatar"><canvas id="avatarCanvas" width="108" height="108"></canvas></div>
+      <div class="brand-col">
+        <span class="cap">TIME</span>
+        <span class="clock" id="clock">--:--:--</span>
+        <span class="chip" id="chip">WLAN</span>
+      </div>
+      <div class="motto" id="mottoPreview">相信相信的力量!</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>左上角头像</h2>
+      <span class="hint">108 × 108</span>
+    </div>
+    <div class="upload" id="drop">
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="upload-text">点击选择图片，或拖拽图片到这里</div>
+      <div class="upload-sub">自动居中裁剪为 108×108，建议使用正方形图片</div>
+    </div>
+    <div class="row">
+      <button class="btn text" id="resetLogo">恢复默认头像</button>
+      <span class="hint" id="logoState">—</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>右上角箴言</h2>
+      <span class="hint" id="countHint">0 / 12</span>
+    </div>
+    <div class="field">
+      <input id="motto" type="text" maxlength="12" placeholder="输入一句箴言" autocomplete="off">
+      <button class="btn primary" id="saveMotto">保存</button>
+    </div>
+    <div class="field-actions">
+      <span class="hint">仅支持设备字库内的常用汉字，保存后屏幕立即更新</span>
+      <button class="btn text" id="resetMotto">恢复默认</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>天气城市</h2>
+      <span class="hint" id="wxLabel">常州 武进</span>
+    </div>
+    <div class="field two">
+      <input id="city" type="text" maxlength="6" placeholder="城市，如 常州" autocomplete="off">
+      <input id="district" type="text" maxlength="6" placeholder="区域，如 武进" autocomplete="off">
+    </div>
+    <div class="field-actions">
+      <span class="hint">保存时由本页联网解析坐标，屏幕天气会立即刷新</span>
+      <div class="btns">
+        <button class="btn text" id="resetWx">恢复默认</button>
+        <button class="btn primary small" id="saveWx">保存</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    同一 Wi-Fi 下的手机 / 电脑均可打开此页面<br>
+    设备地址 <code id="hostCode">—</code>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var LOGO_W = 108, LOGO_H = 108, LOGO_BYTES = LOGO_W * LOGO_H * 2;
+  var DEFAULT_MOTTO = '相信相信的力量!';
+  var DEFAULT_CITY = '常州', DEFAULT_DISTRICT = '武进';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var canvas = $('avatarCanvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  var mottoInput = $('motto');
+  var maxChars = 12;
+  var busy = false;
+  var toastTimer = null;
+
+  /* ---------------- 工具 ---------------- */
+
+  function toast(msg, kind){
+    var el = $('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.className = 'toast'; }, 2600);
+  }
+
+  function setBusy(on){
+    busy = on;
+    document.body.classList.toggle('busy', on);
+    $('saveMotto').disabled = on;
+    $('resetLogo').disabled = on;
+    $('resetMotto').disabled = on;
+    $('saveWx').disabled = on;
+    $('resetWx').disabled = on;
+    if (on) {
+      $('saveMotto').innerHTML = '<span class="spin"></span>保存中';
+    } else {
+      $('saveMotto').textContent = '保存';
+    }
+  }
+
+  function drawRgb565(buf){
+    var img = ctx.createImageData(LOGO_W, LOGO_H);
+    var d = img.data;
+    for (var i = 0; i < LOGO_W * LOGO_H; i++) {
+      var v = buf[i * 2] | (buf[i * 2 + 1] << 8);
+      var r = (v >> 11) & 0x1F;
+      var g = (v >> 5) & 0x3F;
+      var b = v & 0x1F;
+      d[i * 4]     = (r << 3) | (r >> 2);
+      d[i * 4 + 1] = (g << 2) | (g >> 4);
+      d[i * 4 + 2] = (b << 3) | (b >> 2);
+      d[i * 4 + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function drawPlaceholder(){
+    ctx.fillStyle = '#322547';
+    ctx.fillRect(0, 0, LOGO_W, LOGO_H);
+  }
+
+  /* ---------------- 状态同步 ---------------- */
+
+  function loadState(){
+    return fetch('/api/state', { cache: 'no-store' }).then(function(r){
+      if (!r.ok) throw new Error('state');
+      return r.text();
+    }).then(function(txt){
+      var map = {};
+      txt.trim().split('\n').forEach(function(line){
+        var i = line.indexOf('=');
+        if (i > 0) map[line.slice(0, i)] = line.slice(i + 1);
+      });
+      if (map.max_chars) {
+        maxChars = parseInt(map.max_chars, 10) || 12;
+        mottoInput.maxLength = maxChars;
+      }
+      if (map.motto) {
+        mottoInput.value = map.motto;
+        $('mottoPreview').textContent = map.motto;
+      }
+      if (map.city !== undefined || map.district !== undefined) {
+        $('city').value = map.city || '';
+        $('district').value = map.district || '';
+        $('wxLabel').textContent = ((map.city || '') + ' ' + (map.district || '')).trim();
+      }
+      $('pillSsid').textContent = map.ssid ? 'Wi-Fi · ' + map.ssid : '设备未联网';
+      $('chip').textContent = map.ssid ? 'WLAN ' + map.ssid : 'WLAN OFF';
+      $('logoState').textContent = map.custom_logo === '1' ? '当前为自定义头像' : '当前为默认头像';
+      updateCount();
+    }).catch(function(){
+      $('pillSsid').textContent = '无法读取设备状态';
+    });
+  }
+
+  function loadLogo(){
+    return fetch('/api/logo.raw', { cache: 'no-store' }).then(function(r){
+      if (!r.ok) throw new Error('logo');
+      return r.arrayBuffer();
+    }).then(function(ab){
+      var buf = new Uint8Array(ab);
+      if (buf.length === LOGO_BYTES) drawRgb565(buf);
+      else drawPlaceholder();
+    }).catch(drawPlaceholder);
+  }
+
+  /* ---------------- 头像 ---------------- */
+
+  function coverDraw(img){
+    var scale = Math.max(LOGO_W / img.width, LOGO_H / img.height);
+    var w = img.width * scale;
+    var h = img.height * scale;
+    ctx.fillStyle = '#241C33';
+    ctx.fillRect(0, 0, LOGO_W, LOGO_H);
+    ctx.drawImage(img, (LOGO_W - w) / 2, (LOGO_H - h) / 2, w, h);
+  }
+
+  function uploadCanvas(){
+    var data = ctx.getImageData(0, 0, LOGO_W, LOGO_H).data;
+    var out = new Uint8Array(LOGO_BYTES);
+    for (var i = 0; i < LOGO_W * LOGO_H; i++) {
+      var r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+      var v = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+      out[i * 2] = v & 0xFF;
+      out[i * 2 + 1] = (v >> 8) & 0xFF;
+    }
+    setBusy(true);
+    return fetch('/api/logo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: out
+    }).then(function(r){
+      return r.text().then(function(t){
+        if (!r.ok) throw new Error(t || '上传失败');
+        toast('头像已更新到屏幕', 'ok');
+        $('logoState').textContent = '当前为自定义头像';
+      });
+    }).catch(function(e){
+      toast(e.message || '上传失败，请重试', 'error');
+      return loadLogo();
+    }).then(function(){ setBusy(false); });
+  }
+
+  function handleFile(file){
+    if (!file) return;
+    if (!/^image\//.test(file.type)) {
+      toast('请选择图片文件', 'error');
+      return;
+    }
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      coverDraw(img);
+      URL.revokeObjectURL(url);
+      uploadCanvas();
+    };
+    img.onerror = function(){
+      URL.revokeObjectURL(url);
+      toast('图片解析失败', 'error');
+    };
+    img.src = url;
+  }
+
+  function resetLogo(){
+    setBusy(true);
+    fetch('/api/logo', { method: 'DELETE' }).then(function(r){
+      if (!r.ok) throw new Error('恢复失败');
+      return loadLogo();
+    }).then(function(){
+      toast('已恢复默认头像', 'ok');
+      $('logoState').textContent = '当前为默认头像';
+    }).catch(function(e){
+      toast(e.message, 'error');
+    }).then(function(){ setBusy(false); });
+  }
+
+  /* ---------------- 箴言 ---------------- */
+
+  function updateCount(){
+    var n = Array.from(mottoInput.value).length;
+    $('countHint').textContent = n + ' / ' + maxChars;
+  }
+
+  function saveMotto(){
+    var text = mottoInput.value.trim();
+    if (!text) {
+      toast('箴言不能为空', 'error');
+      return;
+    }
+    setBusy(true);
+    fetch('/api/motto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: text
+    }).then(function(r){
+      return r.text().then(function(t){
+        if (!r.ok) throw new Error(t || '保存失败');
+        $('mottoPreview').textContent = text;
+        toast('箴言已更新到屏幕', 'ok');
+      });
+    }).catch(function(e){
+      toast(e.message || '保存失败，请重试', 'error');
+    }).then(function(){ setBusy(false); });
+  }
+
+  function resetMotto(){
+    setBusy(true);
+    fetch('/api/motto', { method: 'DELETE' }).then(function(r){
+      if (!r.ok) throw new Error('恢复失败');
+      return loadState();
+    }).then(function(){
+      mottoInput.value = DEFAULT_MOTTO;
+      $('mottoPreview').textContent = DEFAULT_MOTTO;
+      updateCount();
+      toast('已恢复默认箴言', 'ok');
+    }).catch(function(e){
+      toast(e.message, 'error');
+    }).then(function(){ setBusy(false); });
+  }
+
+  /* ---------------- 天气城市 ---------------- */
+
+  /* Photon 地理编码：支持中文，返回 GeoJSON（coordinates = [lon, lat]） */
+  function photonLookup(q){
+    var url = 'https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6';
+    return fetch(url, { cache: 'no-store' }).then(function(r){
+      if (!r.ok) throw new Error('photon');
+      return r.json();
+    }).then(function(j){
+      var fs = (j && j.features) || [];
+      var pick = null;
+      for (var i = 0; i < fs.length; i++) {
+        var p = fs[i].properties || {};
+        if (p.countrycode === 'CN') { pick = fs[i]; break; }
+      }
+      if (!pick && fs.length) pick = fs[0];
+      if (!pick) return null;
+      var c = pick.geometry && pick.geometry.coordinates;
+      if (!c || c.length < 2) return null;
+      return { lat: c[1], lon: c[0] };
+    }).catch(function(){ return null; });
+  }
+
+  /* Open-Meteo 地理编码兜底（中文可能查不到，拼音/英文可用） */
+  function openMeteoLookup(q){
+    var url = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) +
+              '&count=5&language=zh&format=json';
+    return fetch(url, { cache: 'no-store' }).then(function(r){
+      if (!r.ok) throw new Error('geocoding');
+      return r.json();
+    }).then(function(j){
+      var list = (j && j.results) || [];
+      if (!list.length) return null;
+      return { lat: list[0].latitude, lon: list[0].longitude };
+    }).catch(function(){ return null; });
+  }
+
+  /* 依次尝试「城市+区域」「区域」「城市」，全部失败则报错 */
+  function geocodeAny(city, district){
+    var tries = [];
+    if (city && district) tries.push(city + ' ' + district);
+    if (district) tries.push(district);
+    if (city) tries.push(city);
+
+    var i = 0;
+    function next(){
+      if (i >= tries.length) return Promise.resolve(null);
+      var q = tries[i++];
+      return photonLookup(q).then(function(pos){
+        return pos ? pos : next();
+      });
+    }
+
+    return next().then(function(pos){
+      if (pos) return pos;
+      var q = city || district;
+      return openMeteoLookup(q).then(function(r){
+        if (r) return r;
+        throw new Error('无法解析「' + q + '」的坐标，请换一个名称');
+      });
+    });
+  }
+
+  function saveWeather(){
+    var city = $('city').value.trim();
+    var district = $('district').value.trim();
+    if (!city && !district) {
+      toast('请填写城市或区域', 'error');
+      return;
+    }
+    var label = (city + ' ' + district).trim();
+
+    setBusy(true);
+    geocodeAny(city, district).then(function(pos){
+      var body = 'city=' + city + '\ndistrict=' + district + '\nlabel=' + label +
+                 '\nlat=' + pos.lat.toFixed(6) + '\nlon=' + pos.lon.toFixed(6) + '\n';
+      return fetch('/api/weather', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        body: body
+      }).then(function(r){
+        return r.text().then(function(t){
+          if (!r.ok) throw new Error(t || '保存失败');
+          $('wxLabel').textContent = label;
+          toast('天气已切换到 ' + label, 'ok');
+        });
+      });
+    }).catch(function(e){
+      toast(e.message || '保存失败，请重试', 'error');
+    }).then(function(){ setBusy(false); });
+  }
+
+  function resetWeather(){
+    setBusy(true);
+    fetch('/api/weather', { method: 'DELETE' }).then(function(r){
+      if (!r.ok) throw new Error('恢复失败');
+      $('city').value = DEFAULT_CITY;
+      $('district').value = DEFAULT_DISTRICT;
+      $('wxLabel').textContent = DEFAULT_CITY + ' ' + DEFAULT_DISTRICT;
+      toast('已恢复默认城市', 'ok');
+    }).catch(function(e){
+      toast(e.message, 'error');
+    }).then(function(){ setBusy(false); });
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+
+  var drop = $('drop');
+  var fileInput = $('file');
+
+  drop.addEventListener('click', function(){ fileInput.click(); });
+  fileInput.addEventListener('change', function(){
+    handleFile(fileInput.files && fileInput.files[0]);
+    fileInput.value = '';
+  });
+
+  ['dragenter', 'dragover'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){
+      e.preventDefault();
+      drop.classList.add('drag');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){
+      e.preventDefault();
+      drop.classList.remove('drag');
+    });
+  });
+  drop.addEventListener('drop', function(e){
+    var dt = e.dataTransfer;
+    if (dt && dt.files && dt.files[0]) handleFile(dt.files[0]);
+  });
+
+  mottoInput.addEventListener('input', function(){
+    updateCount();
+    $('mottoPreview').textContent = mottoInput.value || DEFAULT_MOTTO;
+  });
+  mottoInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !busy) saveMotto();
+  });
+
+  $('saveMotto').addEventListener('click', saveMotto);
+  $('resetMotto').addEventListener('click', resetMotto);
+  $('resetLogo').addEventListener('click', resetLogo);
+
+  $('saveWx').addEventListener('click', saveWeather);
+  $('resetWx').addEventListener('click', resetWeather);
+  [$('city'), $('district')].forEach(function(el){
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !busy) saveWeather();
+    });
+  });
+
+  document.addEventListener('paste', function(e){
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') === 0) {
+        handleFile(items[i].getAsFile());
+        toast('已从剪贴板读取图片', 'ok');
+        break;
+      }
+    }
+  });
+
+  /* ---------------- 时钟与初始化 ---------------- */
+
+  function tick(){
+    var d = new Date();
+    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    $('clock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  $('pillHost').textContent = location.host || '设备地址';
+  $('hostCode').textContent = location.host || '—';
+
+  drawPlaceholder();
+  loadState();
+  loadLogo();
+})();
+</script>
+</body>
+</html>

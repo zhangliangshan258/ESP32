@@ -1,0 +1,101 @@
+# ======================================================================
+# ESP-IDF 标准忽略规则
+# ======================================================================
+
+# 构建目录
+build/
+build-bootloader/
+
+# sdkconfig 由 idf.py 生成的配置；defaults 文件需要 commit
+sdkconfig
+sdkconfig.old
+sdkconfig.*.bak
+
+# ESP-IDF 内部运行痕迹（运行时生成的计数器文件）
+component_manager_run_counter.*
+components_with_manifests_list.temp.overrides
+.flash_args
+flash_args
+flash_args.in
+flash_app_args
+flash_bootloader_args
+flash_project_args
+app-flash_args
+app-flash_args.in
+bootloader-flash_args
+partition-table-flash_args
+project_description.json
+ProjectDescription.json
+config.env
+hints.yml
+kconfigs.in
+kconfigs_projbuild.in
+
+# CMake / Ninja
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+.ninja_generated
+compile_commands.json
+compile_flags.txt
+.depend
+.objlist
+
+# 编译中间产物（全局兜底，含根目录散落的 .bin/.elf/.map）
+*.o
+*.obj
+*.a
+*.lib
+*.bin
+*.elf
+*.map
+*.hex
+*.sym
+*.lst
+*.dump
+*.dis
+*.dylib
+
+# 其他 CMake 中间文件
+CPackConfig.cmake
+CPackSourceConfig.cmake
+ldgen_libraries
+ldgen_libraries.in
+
+# 日志
+*.log
+
+# ======================================================================
+# ESP-IDF 组件管理器拉取的依赖（重新构建时会自动下载，不要入库）
+# dependencies.lock 需要入库（锁定依赖版本）
+# ======================================================================
+managed_components/
+
+# ======================================================================
+# 临时文件 / 备份
+# ======================================================================
+*.bak
+*.bak.*
+*.bak[0-9]
+*.bak[0-9][0-9]
+*.tmp
+*.tmp.*
+*.orig
+.patch-*
+
+# 本项目的临时目录
+.cache/
+.screenshots/
+.vscode/*
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini

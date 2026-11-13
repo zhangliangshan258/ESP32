@@ -1,0 +1,30 @@
+# ======================================================================
+# 行尾规范化（整个仓库统一 LF，ESP-IDF 规范）
+# checkout 时保持原样，commit 时统一转 LF
+# ======================================================================
+* text=auto eol=lf
+
+# Windows 原生脚本例外（Windows PowerShell 5 推荐 CRLF）
+*.ps1 text eol=crlf
+
+# 二进制文件不动
+*.bin binary
+*.elf binary
+*.map binary
+*.hex binary
+*.o binary
+*.obj binary
+*.a binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.rar binary
+*.gz binary
+*.xz binary
+*.woff2 binary
+*.ttf binary
